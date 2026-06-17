@@ -28,13 +28,31 @@ class ArtifactCategory(str, Enum):
 
 
 @dataclass(frozen=True)
+class Evidence:
+    source: str
+    kind: str
+    detail: str
+    line: int | None = None
+    operation: str | None = None
+
+
+@dataclass(frozen=True)
+class ArtifactImpact:
+    blocks_execution: bool
+    blocks_result_verification: bool
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class RequiredArtifact:
     name: str
     path: str
     category: ArtifactCategory
     severity: str
-    evidence: list[str]
+    evidence: list[Evidence]
     required_for: str
+    searched_locations: list[str] = field(default_factory=list)
+    impact: ArtifactImpact | None = None
 
 
 @dataclass(frozen=True)
@@ -43,8 +61,10 @@ class MissingArtifact:
     path: str
     category: ArtifactCategory
     severity: str
-    evidence: list[str]
+    evidence: list[Evidence]
     required_for: str
+    searched_locations: list[str] = field(default_factory=list)
+    impact: ArtifactImpact | None = None
 
 
 @dataclass(frozen=True)

@@ -66,3 +66,52 @@ parser.add_argument("--output", required=True)
     assert "--output" in audit.missing_required_arguments
     assert audit.corrected_command[-2:] == ["--output", "artifacts/metrics.json"]
     assert any(issue.type == "missing_required_argument" for issue in audit.documentation_issues)
+
+
+def test_artifact_audit_includes_structured_code_evidence(tmp_path: Path) -> None:
+    (tmp_path / "evaluate_ensemble.py").write_text(
+        """
+import json
+import h5py
+import torch
+
+def main(args):
+    ckpts = [torch.load(path) for path in args.checkpoints]
+    data = h5py.File(args.dataset)
+    labels = h5py.File(args.labels)
+    split = json.loads(open(args.split_json).read())
+""",
+        encoding="utf-8",
+    )
+    command = [
+        "python",
+        "evaluate_ensemble.py",
+        "--checkpoints",
+        "results/fold0/best.pt",
+        "--dataset",
+        "data/dataset.h5",
+        "--labels",
+        "data/label.h5",
+        "--split_json",
+        "data/split.json",
+        "--output",
+        "artifacts/metrics.json",
+    ]
+
+    audit = ArtifactAuditor().audit(tmp_path, command)
+    by_path = {artifact.path: artifact for artifact in audit.missing_artifacts}
+
+    assert any(
+        evidence.source == "evaluate_ensemble.py"
+        and evidence.operation == "h5py.File"
+        and evidence.line is not None
+        for evidence in by_path["data/dataset.h5"].evidence
+    )
+    assert by_path["data/dataset.h5"].searched_locations == [
+        "repository",
+        "git_lfs",
+        "github_releases",
+        "linked_downloads",
+    ]
+    assert by_path["data/dataset.h5"].impact is not None
+    assert by_path["data/dataset.h5"].impact.blocks_execution is True

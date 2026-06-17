@@ -15,7 +15,7 @@ from repro_agent.tools.artifact_discovery import (
 
 class ArtifactAuditor:
     def audit(self, repo_path: Path, command: list[str]) -> ArtifactAudit:
-        required = required_artifacts_from_command(command)
+        required = required_artifacts_from_command(command, repo_path=repo_path)
         missing = missing_artifacts(repo_path, required)
         status = ReproductionStatus.BLOCKED if missing else ReproductionStatus.INSPECTED
         return ArtifactAudit(

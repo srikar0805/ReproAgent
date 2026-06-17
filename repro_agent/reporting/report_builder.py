@@ -63,10 +63,26 @@ def build_audit_report(audit: ReproducibilityAudit) -> str:
         "",
     ]
     if missing:
-        lines.extend(
-            f"- {item['path']} ({item['category']}, {item['severity']})"
-            for item in missing
-        )
+        for item in missing:
+            lines.append(f"- {item['path']} ({item['category']}, {item['severity']})")
+            lines.append(f"  Required for: {item['required_for']}")
+            impact = item.get("impact") or {}
+            lines.append(
+                "  Impact: "
+                f"blocks_execution={impact.get('blocks_execution')}, "
+                f"blocks_result_verification={impact.get('blocks_result_verification')}"
+            )
+            evidence = item.get("evidence") or []
+            if evidence:
+                lines.append("  Evidence:")
+                for entry in evidence[:4]:
+                    location = entry["source"]
+                    if entry.get("line"):
+                        location = f"{location}:{entry['line']}"
+                    lines.append(f"  - {location}: {entry['detail']}")
+            searched = item.get("searched_locations") or []
+            if searched:
+                lines.append(f"  Searched: {', '.join(searched)}")
     else:
         lines.append("- None detected")
 
