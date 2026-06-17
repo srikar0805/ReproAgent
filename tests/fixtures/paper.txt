@@ -1,0 +1,9 @@
+ReproAgent Example Paper
+
+Abstract
+We train Model A on CIFAR-10 and report classification accuracy.
+
+1 Introduction
+The experiment in Table 2 evaluates Model A on CIFAR-10.
+We train for 100 epochs with batch size 128 using Adam and learning rate 0.001.
+Table 2 reports accuracy 91.40%.

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repro-agent"
+version = "0.1.0"
+description = "CLI-first research reproduction assistant for papers and code repositories."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "ReproAgent Contributors" }]
+dependencies = []
+
+[project.optional-dependencies]
+pdf = ["pypdf>=4.0"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+repro-agent = "repro_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["repro_agent*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

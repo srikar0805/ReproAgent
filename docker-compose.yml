@@ -1,0 +1,13 @@
+services:
+  repro-agent:
+    build: .
+    image: repro-agent:dev
+    volumes:
+      - .:/workspace:ro
+      - ./artifacts:/workspace/artifacts
+    working_dir: /workspace
+    user: "1000:1000"
+    environment:
+      REPRO_AGENT_ARTIFACT_DIR: /workspace/artifacts
+      REPRO_AGENT_ALLOW_NETWORK: "false"
+    command: ["python", "-m", "repro_agent.cli", "--help"]

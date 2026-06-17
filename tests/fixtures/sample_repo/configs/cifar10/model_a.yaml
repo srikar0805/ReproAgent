@@ -1,0 +1,4 @@
+model: model_a
+dataset: cifar10
+epochs: 100
+batch_size: 128
