@@ -60,8 +60,8 @@ def main(argv: list[str] | None = None) -> int:
             _write_text(output_dir / "reproducibility-report.md", build_audit_report(audit))
             _write_json(output_dir / "audit.json", to_plain_data(audit))
             print(f"Wrote audit artifacts to {output_dir}")
-            print(f"Status: {audit.status.value}")
-            print(f"Verdict: {audit.verdict.primary_reason}")
+            print(f"Verdict: {audit.verdict.status.value}")
+            print(f"Reason: {audit.verdict.primary_reason}")
             return 0
 
         parser.print_help()

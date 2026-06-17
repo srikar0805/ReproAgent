@@ -30,6 +30,8 @@ def test_artifact_auditor_blocks_missing_scientific_artifacts(tmp_path: Path) ->
     assert "data/label.h5" in missing_paths
     assert "data/split.json" in missing_paths
     assert "results/fold0/best.pt" in missing_paths
+    assert audit.missing_artifacts[0].finding_id == "ART-001"
+    assert audit.missing_artifacts[0].confidence >= 0.9
     assert all(
         artifact.category != ArtifactCategory.METRICS_OUTPUT
         for artifact in audit.missing_artifacts

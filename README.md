@@ -78,6 +78,19 @@ Supported in the first scaffold:
 
 Current statuses:
 
+Public audit verdicts:
+
+```text
+runnable
+blocked
+ambiguous
+inspection_failed
+restricted
+cost_prohibitive
+```
+
+Execution/reproduction states:
+
 ```text
 not_analyzed
 inspected
@@ -88,6 +101,10 @@ partially_reproduced
 approximately_reproduced
 exactly_reproduced
 ```
+
+`runnable` means the static audit did not find blocking missing artifacts. It does not mean the result has been reproduced.
+
+Machine-readable audit outputs include report metadata such as schema version, tool version, audit ID, creation time, repository commit, and paper hash.
 
 Still intentionally out of scope:
 
@@ -132,3 +149,7 @@ repro_agent/
 ## Security Direction
 
 ReproAgent `0.1` performs static auditing only. Later execution stages will run third-party repositories only inside Docker. The sandbox design requires explicit command approval, bounded retries, resource limits, no host Docker socket mounts, and artifact-only write access.
+
+## Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md) for product workflow goals, benchmark targets, and what not to build yet.

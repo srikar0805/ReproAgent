@@ -43,10 +43,16 @@ def build_audit_report(audit: ReproducibilityAudit) -> str:
     data = to_plain_data(audit)
     missing = data["artifact_audit"]["missing_artifacts"]
     issues = data["command_audit"]["documentation_issues"]
+    metadata = data["metadata"]
     lines = [
         "# Reproducibility Audit",
         "",
-        f"Status: {data['status']}",
+        f"Audit ID: {metadata['audit_id']}",
+        f"Created: {metadata['created_at']}",
+        f"Schema version: {metadata['schema_version']}",
+        f"Tool version: {metadata['tool_version']}",
+        f"Verdict: {data['verdict']['status']}",
+        f"Internal status: {data['status']}",
         f"Target: {data['target']['description']}",
         "",
         "## Public Result Card",
@@ -64,7 +70,13 @@ def build_audit_report(audit: ReproducibilityAudit) -> str:
     ]
     if missing:
         for item in missing:
-            lines.append(f"- {item['path']} ({item['category']}, {item['severity']})")
+            finding = f"{item['finding_id']} " if item.get("finding_id") else ""
+            confidence = item.get("confidence")
+            lines.append(
+                f"- {finding}{item['path']} ({item['category']}, {item['severity']})"
+            )
+            if confidence is not None:
+                lines.append(f"  Confidence: {confidence}")
             lines.append(f"  Required for: {item['required_for']}")
             impact = item.get("impact") or {}
             lines.append(

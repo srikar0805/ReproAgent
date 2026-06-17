@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 import re
 
@@ -84,7 +85,7 @@ def required_artifacts_from_command(
                     impact=_impact_for(category),
                 )
             )
-    return _dedupe_required(artifacts)
+    return _with_finding_ids(_dedupe_required(artifacts))
 
 
 def missing_artifacts(repo_path: Path, required: list[RequiredArtifact]) -> list[MissingArtifact]:
@@ -104,6 +105,8 @@ def missing_artifacts(repo_path: Path, required: list[RequiredArtifact]) -> list
                 required_for=artifact.required_for,
                 searched_locations=artifact.searched_locations,
                 impact=artifact.impact,
+                finding_id=artifact.finding_id,
+                confidence=artifact.confidence,
             )
         )
     return missing
@@ -238,6 +241,13 @@ def _dedupe_required(artifacts: list[RequiredArtifact]) -> list[RequiredArtifact
         seen.add(artifact.path)
         unique.append(artifact)
     return unique
+
+
+def _with_finding_ids(artifacts: list[RequiredArtifact]) -> list[RequiredArtifact]:
+    return [
+        replace(artifact, finding_id=f"ART-{index:03d}")
+        for index, artifact in enumerate(artifacts, start=1)
+    ]
 
 
 def _ignored(path: Path) -> bool:

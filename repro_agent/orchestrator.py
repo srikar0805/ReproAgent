@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import hashlib
 from pathlib import Path
 import tempfile
 
+from repro_agent import __version__
 from repro_agent.agents.artifact_auditor import ArtifactAuditor
 from repro_agent.agents.paper_analyzer import PaperAnalyzer
 from repro_agent.agents.repository_inspector import RepositoryInspector
 from repro_agent.schemas.audit import (
     AuditVerdict,
+    AuditVerdictStatus,
     CommandAudit,
     ComputeEstimate,
     EnvironmentAudit,
+    ReportMetadata,
     ReproducibilityAudit,
     ReproductionStatus,
 )
@@ -148,6 +153,11 @@ class Orchestrator:
                 },
             )
             audit = ReproducibilityAudit(
+                metadata=self._build_metadata(
+                    paper=paper,
+                    repository_commit=repo_inspection.commit,
+                    target=target,
+                ),
                 status=status,
                 target={
                     "description": target,
@@ -201,7 +211,7 @@ class Orchestrator:
     def _build_verdict(self, status: ReproductionStatus, missing: list) -> AuditVerdict:
         if status == ReproductionStatus.BLOCKED:
             return AuditVerdict(
-                status=status,
+                status=AuditVerdictStatus.BLOCKED,
                 reproducible_from_public_materials=False,
                 primary_reason="Required scientific artifacts are unavailable.",
                 recommended_actions=[
@@ -211,11 +221,50 @@ class Orchestrator:
                 ],
             )
         return AuditVerdict(
-            status=status,
+            status=AuditVerdictStatus.RUNNABLE,
             reproducible_from_public_materials=True,
-            primary_reason="No blocking missing artifacts were detected by static audit.",
+            primary_reason=(
+                "No blocking missing artifacts were detected by static audit. "
+                "This does not mean the result has been reproduced."
+            ),
             recommended_actions=["Proceed to environment reconstruction."],
         )
+
+    def _build_metadata(
+        self, paper: Path, repository_commit: str | None, target: str
+    ) -> ReportMetadata:
+        paper_hash = self._file_sha256(paper)
+        audit_seed = "|".join(
+            [
+                paper_hash or "",
+                repository_commit or "",
+                target,
+                __version__,
+            ]
+        )
+        audit_id = "audit-" + hashlib.sha256(audit_seed.encode("utf-8")).hexdigest()[:12]
+        created_at = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+        return ReportMetadata(
+            schema_version="0.1.0",
+            tool_version=__version__,
+            audit_id=audit_id,
+            created_at=created_at,
+            repository_commit=repository_commit,
+            paper_hash=paper_hash,
+        )
+
+    def _file_sha256(self, path: Path) -> str | None:
+        if not path.exists():
+            return None
+        digest = hashlib.sha256()
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return "sha256:" + digest.hexdigest()
 
     def _estimate_compute(self, repo_path: Path) -> ComputeEstimate:
         readme = repo_path / "README.md"

@@ -35,6 +35,7 @@ Known commits:
 ```text
 2161ef9 Initial ReproAgent scaffold
 c1727de Add evidence-backed artifact audit
+430e156 Add project memory handoff
 ```
 
 ## Current MVP Scope
@@ -133,7 +134,20 @@ Future placeholder components:
 
 ## Status Model
 
-Current enum:
+Public audit verdicts:
+
+```text
+runnable
+blocked
+ambiguous
+inspection_failed
+restricted
+cost_prohibitive
+```
+
+`runnable` means the static audit did not find blocking missing artifacts. It does not mean the result has been reproduced.
+
+Internal execution/reproduction states:
 
 ```text
 not_analyzed
@@ -161,6 +175,8 @@ The most important implementation upgrade so far is evidence-backed artifact rep
 
 Missing artifacts now include:
 
+- stable finding ID
+- confidence
 - artifact name
 - path
 - category
@@ -193,6 +209,7 @@ searched_locations:
 impact:
   blocks_execution: true
   blocks_result_verification: true
+confidence: 0.9
 ```
 
 This distinction matters: ReproAgent should not merely say "missing file"; it should explain why the file is required and where that conclusion came from.
@@ -358,6 +375,12 @@ python -m compileall repro_agent tests
 python -m repro_agent.cli audit --help
 ```
 
+CI was added with GitHub Actions and pytest coverage configuration. Locally, `pytest` may still need to be installed with:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
 Manual assertion suite invoked tests from:
 
 ```text
@@ -410,6 +433,7 @@ README.md
 docs/architecture.md
 docs/security.md
 docs/adding-frameworks.md
+docs/roadmap.md
 ```
 
 Generated Pigformer audit:
@@ -428,10 +452,10 @@ Recommended next steps:
 2. Add repository-local Git LFS detection.
 3. Add GitHub release asset inventory.
 4. Add linked-download classification for Zenodo, Hugging Face, Figshare, Kaggle, Google Drive, and project pages.
-5. Add an `ambiguous` or `inspection_failed` public verdict category.
+5. Add richer `ambiguous`, `restricted`, `cost_prohibitive`, and `inspection_failed` verdict paths.
 6. Add a five-repository benchmark suite.
 7. Add integration tests that use fixture repositories modeled after Pigformer.
-8. Add `pytest` to the dev environment and CI.
+8. Add JSON Schema validation for audit outputs.
 9. Add command-audit evidence with script/line for missing required arguments.
 10. Build MVP 0.2 only after audit quality is strong: Docker environment reconstruction, still no full training.
 
@@ -466,4 +490,3 @@ final reproduction success
 ## Current Product Statement
 
 > ReproAgent is a static, evidence-backed reproducibility auditor that inspects a paper and repository, validates documented commands, identifies required scientific artifacts, and determines whether the selected result is runnable, blocked, or ambiguous without executing untrusted research code.
-

@@ -17,6 +17,15 @@ class ReproductionStatus(str, Enum):
     EXACTLY_REPRODUCED = "exactly_reproduced"
 
 
+class AuditVerdictStatus(str, Enum):
+    RUNNABLE = "runnable"
+    BLOCKED = "blocked"
+    AMBIGUOUS = "ambiguous"
+    INSPECTION_FAILED = "inspection_failed"
+    RESTRICTED = "restricted"
+    COST_PROHIBITIVE = "cost_prohibitive"
+
+
 class ArtifactCategory(str, Enum):
     DATASET = "dataset"
     LABELS = "labels"
@@ -25,6 +34,16 @@ class ArtifactCategory(str, Enum):
     CONFIGURATION = "configuration"
     METRICS_OUTPUT = "metrics_output"
     UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class ReportMetadata:
+    schema_version: str
+    tool_version: str
+    audit_id: str
+    created_at: str
+    repository_commit: str | None
+    paper_hash: str | None
 
 
 @dataclass(frozen=True)
@@ -53,6 +72,8 @@ class RequiredArtifact:
     required_for: str
     searched_locations: list[str] = field(default_factory=list)
     impact: ArtifactImpact | None = None
+    finding_id: str = ""
+    confidence: float = 0.9
 
 
 @dataclass(frozen=True)
@@ -65,6 +86,8 @@ class MissingArtifact:
     required_for: str
     searched_locations: list[str] = field(default_factory=list)
     impact: ArtifactImpact | None = None
+    finding_id: str = ""
+    confidence: float = 0.9
 
 
 @dataclass(frozen=True)
@@ -114,7 +137,7 @@ class ComputeEstimate:
 
 @dataclass(frozen=True)
 class AuditVerdict:
-    status: ReproductionStatus
+    status: AuditVerdictStatus
     reproducible_from_public_materials: bool
     primary_reason: str
     recommended_actions: list[str]
@@ -122,6 +145,7 @@ class AuditVerdict:
 
 @dataclass(frozen=True)
 class ReproducibilityAudit:
+    metadata: ReportMetadata
     status: ReproductionStatus
     target: dict
     repository: dict

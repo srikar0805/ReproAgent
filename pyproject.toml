@@ -14,7 +14,10 @@ dependencies = []
 
 [project.optional-dependencies]
 pdf = ["pypdf>=4.0"]
-dev = ["pytest>=8.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+]
 
 [project.scripts]
 repro-agent = "repro_agent.cli:main"
@@ -25,3 +28,4 @@ include = ["repro_agent*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "--cov=repro_agent --cov-report=term-missing"

@@ -51,4 +51,7 @@ parser.add_argument("--output", required=True)
     )
 
     assert audit.status == ReproductionStatus.BLOCKED
+    assert audit.verdict.status == "blocked"
     assert audit.verdict.reproducible_from_public_materials is False
+    assert audit.metadata.schema_version == "0.1.0"
+    assert audit.metadata.paper_hash is not None
