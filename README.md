@@ -62,6 +62,52 @@ repro-agent audit \
   --output-dir artifacts/project-audit
 ```
 
+## Baseline And Compare Planning
+
+ReproAgent now provides the first planning slice of the researcher workflow:
+
+```text
+Audit -> Baseline -> Compare
+```
+
+Prepare a baseline:
+
+```bash
+repro-agent baseline \
+  --paper paper.pdf \
+  --repo ./baseline-repo \
+  --target "Table 1 overall MAE" \
+  --mode exact_reproduction \
+  --output-dir experiments/baseline-01
+```
+
+Plan a fair comparison:
+
+```bash
+repro-agent compare \
+  --paper paper.pdf \
+  --baseline-repo ./baseline-repo \
+  --candidate-repo ./my-model \
+  --dataset ./data \
+  --target "Table 1 overall MAE" \
+  --mode fair_benchmark \
+  --output-dir experiments/comparison-01
+```
+
+Scientific modes:
+
+```text
+exact_reproduction
+independent_replication
+fair_benchmark
+```
+
+- `exact_reproduction` requires the original artifacts and protocol.
+- `independent_replication` permits explicit, reviewable assumptions but cannot validate the exact published number.
+- `fair_benchmark` defines a new common protocol for baseline and candidate and must not be presented as paper reproduction.
+
+These commands currently generate preparation and comparison plans. They do not execute repository code yet.
+
 ## Current Scope
 
 Supported in the first scaffold:
@@ -115,6 +161,8 @@ Still intentionally out of scope:
 - Automatic acquisition of restricted datasets
 - Long-running training
 - Scientific changes to model architecture, data, loss, or metrics
+
+The next execution milestone will build isolated environments and smoke tests. It will remain separate from static audit/planning.
 
 ## Example Verdict
 

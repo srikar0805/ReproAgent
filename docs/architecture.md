@@ -16,6 +16,18 @@ CLI
 
 MVP 0.1 implements paper/repository inspection, static command validation, artifact completeness auditing, and a blocked/runnable verdict. Later milestones add Docker builds, smoke tests, repair loops, metric extraction, and full reproduction reports.
 
+The next product layer derives researcher plans from the audit:
+
+```text
+Audit evidence
+  -> BaselinePlan
+  -> ComparisonPlan
+```
+
+`BaselinePlan` records exact-reproduction blockers, independent-replication assumptions, and fair-benchmark alternatives.
+
+`ComparisonPlan` records baseline/candidate evaluation entrypoints and the shared dataset, split, preprocessing, metric, fold, and seed requirements needed for a fair comparison.
+
 ## Pipeline
 
 ```text

@@ -5,6 +5,7 @@ from __future__ import annotations
 from repro_agent.schemas.common import to_plain_data
 from repro_agent.schemas.audit import ReproducibilityAudit
 from repro_agent.schemas.experiment import ReproductionSpec
+from repro_agent.schemas.research import BaselinePlan, ComparisonPlan
 
 
 def build_reproduction_report(spec: ReproductionSpec) -> str:
@@ -143,4 +144,100 @@ def build_audit_report(audit: ReproducibilityAudit) -> str:
         ]
     )
     lines.extend(f"- {action}" for action in data["verdict"]["recommended_actions"])
+    return "\n".join(lines) + "\n"
+
+
+def build_baseline_plan_report(plan: BaselinePlan) -> str:
+    data = to_plain_data(plan)
+    lines = [
+        "# Baseline Preparation Plan",
+        "",
+        f"Mode: {data['mode']}",
+        f"Status: {data['status']}",
+        f"Target: {data['target']['description']}",
+        f"Audit ID: {data['audit_id']}",
+        "",
+        "## Baseline Command",
+        "",
+        "```bash",
+        " ".join(data["command"]) if data["command"] else "# no command detected",
+        "```",
+        "",
+        "## Blocking Findings",
+        "",
+    ]
+    if data["blockers"]:
+        lines.extend(
+            f"- {item.get('finding_id', 'unknown')}: "
+            f"{item.get('path', item.get('category', 'unknown'))}"
+            for item in data["blockers"]
+        )
+    else:
+        lines.append("- None detected")
+
+    lines.extend(["", "## Available Paths", ""])
+    if data["options"]:
+        for option in data["options"]:
+            marker = " (recommended)" if option["recommended"] else ""
+            lines.append(f"- {option['title']}{marker}")
+            lines.append(f"  {option['description']}")
+            lines.append(
+                f"  Preserves exact reproduction: {option['preserves_exact_reproduction']}"
+            )
+    else:
+        lines.append("- Proceed to environment reconstruction.")
+
+    lines.extend(["", "## Assumptions", ""])
+    if data["assumptions"]:
+        lines.extend(
+            f"- {item['name']}: {item['value']} "
+            f"(scientific impact: {item['scientific_impact']})"
+            for item in data["assumptions"]
+        )
+    else:
+        lines.append("- None added")
+
+    lines.extend(["", "## Next Steps", ""])
+    lines.extend(f"- {step}" for step in data["next_steps"])
+    return "\n".join(lines) + "\n"
+
+
+def build_comparison_plan_report(plan: ComparisonPlan) -> str:
+    data = to_plain_data(plan)
+    lines = [
+        "# Fair Comparison Plan",
+        "",
+        f"Mode: {data['mode']}",
+        f"Status: {data['status']}",
+        f"Target: {data['target']['description']}",
+        "",
+        "## Baseline",
+        "",
+        f"- Repository: {data['baseline']['repository']['url']}",
+        f"- Framework: {data['baseline']['framework'] or 'unknown'}",
+        f"- Command: {' '.join(data['baseline']['command']) or 'unknown'}",
+        "",
+        "## Candidate",
+        "",
+        f"- Repository: {data['candidate']['repository']}",
+        f"- Framework: {data['candidate']['framework'] or 'unknown'}",
+        f"- Command: {' '.join(data['candidate']['command']) or 'unknown'}",
+        "",
+        "## Shared Protocol",
+        "",
+    ]
+    lines.extend(f"- {key}: {value}" for key, value in data["shared_protocol"].items())
+    lines.extend(["", "## Fairness Requirements", ""])
+    lines.extend(f"- {item}" for item in data["fairness_requirements"])
+    lines.extend(["", "## Blockers", ""])
+    if data["blockers"]:
+        lines.extend(
+            f"- {item.get('finding_id', 'unknown')}: "
+            f"{item.get('path', item.get('category', 'unknown'))}"
+            for item in data["blockers"]
+        )
+    else:
+        lines.append("- None detected")
+    lines.extend(["", "## Next Steps", ""])
+    lines.extend(f"- {step}" for step in data["next_steps"])
     return "\n".join(lines) + "\n"

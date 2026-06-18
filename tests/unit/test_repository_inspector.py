@@ -13,6 +13,8 @@ def test_repository_inspector_finds_pytorch_training_command() -> None:
     assert inspection.entrypoints.train == "scripts/train.py"
     assert inspection.configs == ["configs/cifar10/model_a.yaml"]
     assert inspection.dataset.name == "CIFAR-10"
+    assert inspection.commit is None
+    assert inspection.url is None
     assert inspection.candidate_command == [
         "python",
         "scripts/train.py",

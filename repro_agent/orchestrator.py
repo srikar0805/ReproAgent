@@ -23,6 +23,13 @@ from repro_agent.schemas.audit import (
 )
 from repro_agent.schemas.common import to_plain_data
 from repro_agent.schemas.experiment import ReproductionSpec
+from repro_agent.schemas.research import (
+    BaselinePlan,
+    ComparisonPlan,
+    PreparationStatus,
+    ResearchMode,
+    ResolutionOption,
+)
 from repro_agent.tools.docker_tools import planned_image_name
 from repro_agent.tools.command_validator import validate_documented_command
 from repro_agent.tools.git_tools import clone_repository, get_remote_url, looks_like_url
@@ -195,6 +202,126 @@ class Orchestrator:
             )
             return spec, audit
 
+    def prepare_baseline(
+        self,
+        paper: Path,
+        repo: str,
+        target: str,
+        mode: ResearchMode = ResearchMode.EXACT_REPRODUCTION,
+        dataset: Path | None = None,
+        device: str = "cpu",
+        clone: bool = False,
+    ) -> tuple[ReproductionSpec, ReproducibilityAudit, BaselinePlan]:
+        spec, audit = self.audit(
+            paper=paper,
+            repo=repo,
+            target=target,
+            device=device,
+            clone=clone,
+        )
+        blockers = [to_plain_data(item) for item in audit.artifact_audit.missing_artifacts]
+        dataset_value = self._resolve_supplied_dataset(dataset)
+        status = self._preparation_status(mode, blockers, dataset_value)
+        plan = BaselinePlan(
+            metadata=audit.metadata,
+            mode=mode,
+            status=status,
+            target=audit.target,
+            repository=audit.repository,
+            audit_id=audit.metadata.audit_id,
+            command=spec.execution["command"],
+            supplied_dataset=dataset_value,
+            blockers=blockers,
+            options=self._resolution_options(blockers),
+            assumptions=self._baseline_assumptions(mode, blockers, dataset_value),
+            next_steps=self._baseline_next_steps(status, mode),
+        )
+        return spec, audit, plan
+
+    def plan_comparison(
+        self,
+        paper: Path,
+        baseline_repo: str,
+        candidate_repo: str,
+        target: str,
+        dataset: Path | None = None,
+        mode: ResearchMode = ResearchMode.FAIR_BENCHMARK,
+        device: str = "cpu",
+        clone: bool = False,
+    ) -> tuple[ReproductionSpec, ReproducibilityAudit, ComparisonPlan]:
+        spec, audit, baseline_plan = self.prepare_baseline(
+            paper=paper,
+            repo=baseline_repo,
+            target=target,
+            mode=mode,
+            dataset=dataset,
+            device=device,
+            clone=clone,
+        )
+        candidate = self.repository_inspector.inspect(candidate_repo, clone=clone)
+        candidate_command = self._candidate_evaluation_command(candidate)
+        blockers = list(baseline_plan.blockers)
+        if not candidate_command:
+            blockers.append(
+                {
+                    "finding_id": "CMP-001",
+                    "category": "candidate_evaluation_entrypoint",
+                    "severity": "blocker",
+                    "path": candidate_repo,
+                    "required_for": "candidate_evaluation",
+                    "confidence": 0.8,
+                }
+            )
+        dataset_value = self._resolve_supplied_dataset(dataset)
+        status = self._comparison_status(
+            mode=mode,
+            baseline_status=baseline_plan.status,
+            candidate_has_command=bool(candidate_command),
+            dataset=dataset_value,
+        )
+        metric = audit.target["reported_metric"]
+        plan = ComparisonPlan(
+            metadata=audit.metadata,
+            mode=mode,
+            status=status,
+            target=audit.target,
+            baseline={
+                "repository": audit.repository,
+                "command": spec.execution["command"],
+                "framework": spec.environment["framework"],
+            },
+            candidate={
+                "repository": candidate.url or candidate.source,
+                "commit": candidate.commit,
+                "framework": candidate.framework,
+                "command": candidate_command,
+            },
+            shared_protocol={
+                "dataset": dataset_value or spec.dataset.get("name"),
+                "metric": metric.get("name"),
+                "reported_value": metric.get("value"),
+                "split_policy": (
+                    "original_required"
+                    if mode == ResearchMode.EXACT_REPRODUCTION
+                    else "common_split_must_be_declared"
+                ),
+                "device": device,
+                "execution_available": False,
+            },
+            blockers=blockers,
+            options=self._resolution_options(blockers),
+            fairness_requirements=[
+                "Use the same dataset version for baseline and candidate.",
+                "Use the same train/validation/test split.",
+                "Use the same preprocessing and metric implementation.",
+                "Use the same fold or seed policy.",
+                "Record parameters, runtime, memory, and code commits.",
+                "Do not claim paper reproduction when using a replacement split.",
+            ],
+            next_steps=self._comparison_next_steps(status),
+        )
+        return spec, audit, plan
+
     def _resolve_repo_for_audit(
         self, repo: str, clone: bool, tmpdir: Path
     ) -> tuple[Path, str | None]:
@@ -229,6 +356,152 @@ class Orchestrator:
             ),
             recommended_actions=["Proceed to environment reconstruction."],
         )
+
+    def _preparation_status(
+        self, mode: ResearchMode, blockers: list[dict], dataset: str | None
+    ) -> PreparationStatus:
+        if not blockers:
+            return PreparationStatus.READY_FOR_ENVIRONMENT
+        if mode == ResearchMode.EXACT_REPRODUCTION:
+            return PreparationStatus.BLOCKED
+        if mode == ResearchMode.INDEPENDENT_REPLICATION:
+            return PreparationStatus.ASSUMPTIONS_REQUIRED
+        if dataset:
+            return PreparationStatus.PROTOCOL_DEFINITION_REQUIRED
+        return PreparationStatus.BLOCKED
+
+    def _comparison_status(
+        self,
+        mode: ResearchMode,
+        baseline_status: PreparationStatus,
+        candidate_has_command: bool,
+        dataset: str | None,
+    ) -> PreparationStatus:
+        if not candidate_has_command:
+            return PreparationStatus.BLOCKED
+        if baseline_status == PreparationStatus.READY_FOR_ENVIRONMENT:
+            return PreparationStatus.READY_FOR_ENVIRONMENT
+        if mode == ResearchMode.FAIR_BENCHMARK and dataset:
+            return PreparationStatus.PROTOCOL_DEFINITION_REQUIRED
+        return baseline_status
+
+    def _resolution_options(self, blockers: list[dict]) -> list[ResolutionOption]:
+        if not blockers:
+            return []
+        return [
+            ResolutionOption(
+                option_id="RES-001",
+                title="Acquire original artifacts",
+                description=(
+                    "Request or download the exact missing datasets, splits, labels, "
+                    "and checkpoints from an authoritative source."
+                ),
+                preserves_exact_reproduction=True,
+                scientific_impact="none",
+                recommended=True,
+            ),
+            ResolutionOption(
+                option_id="RES-002",
+                title="Independent replication",
+                description=(
+                    "Recreate missing components using explicit assumptions. This can "
+                    "test the method, but cannot validate the exact published number."
+                ),
+                preserves_exact_reproduction=False,
+                scientific_impact="high",
+            ),
+            ResolutionOption(
+                option_id="RES-003",
+                title="Define a fair common benchmark",
+                description=(
+                    "Run baseline and candidate under a newly declared common dataset, "
+                    "split, preprocessing, and metric protocol."
+                ),
+                preserves_exact_reproduction=False,
+                scientific_impact="high",
+            ),
+        ]
+
+    def _baseline_assumptions(
+        self, mode: ResearchMode, blockers: list[dict], dataset: str | None
+    ) -> list[dict]:
+        assumptions = []
+        if dataset:
+            assumptions.append(
+                {
+                    "name": "dataset_override",
+                    "value": dataset,
+                    "source": "user_supplied",
+                    "scientific_impact": (
+                        "unknown_requires_validation"
+                        if mode == ResearchMode.EXACT_REPRODUCTION
+                        else "high"
+                    ),
+                }
+            )
+        if blockers and mode != ResearchMode.EXACT_REPRODUCTION:
+            assumptions.append(
+                {
+                    "name": "missing_artifact_policy",
+                    "value": mode.value,
+                    "source": "user_selected",
+                    "scientific_impact": "high",
+                }
+            )
+        return assumptions
+
+    def _baseline_next_steps(
+        self, status: PreparationStatus, mode: ResearchMode
+    ) -> list[str]:
+        if status == PreparationStatus.READY_FOR_ENVIRONMENT:
+            return [
+                "Build an isolated environment.",
+                "Run import and CLI help smoke tests.",
+                "Validate dataset and checkpoint loading.",
+            ]
+        if mode == ResearchMode.EXACT_REPRODUCTION:
+            return [
+                "Acquire the original blocking artifacts.",
+                "Re-run the audit after placing or linking them.",
+            ]
+        return [
+            "Review and approve all scientific assumptions.",
+            "Record the new protocol as independent replication or fair benchmark.",
+            "Do not compare the resulting metric directly as exact reproduction.",
+        ]
+
+    def _comparison_next_steps(self, status: PreparationStatus) -> list[str]:
+        if status == PreparationStatus.READY_FOR_ENVIRONMENT:
+            return [
+                "Build isolated baseline and candidate environments.",
+                "Validate both commands against the shared protocol.",
+                "Run smoke tests before full evaluation.",
+            ]
+        if status == PreparationStatus.PROTOCOL_DEFINITION_REQUIRED:
+            return [
+                "Define and freeze the common dataset and split.",
+                "Define one shared preprocessing and metric implementation.",
+                "Review adapters for scientific changes before execution.",
+            ]
+        return [
+            "Resolve blocking baseline or candidate artifacts.",
+            "Re-run comparison planning after the repositories are complete.",
+        ]
+
+    def _candidate_evaluation_command(self, candidate) -> list[str]:
+        evaluate = candidate.entrypoints.evaluate
+        if not evaluate:
+            return []
+        if evaluate in candidate.candidate_command:
+            return candidate.candidate_command
+        return ["python", evaluate]
+
+    def _resolve_supplied_dataset(self, dataset: Path | None) -> str | None:
+        if dataset is None:
+            return None
+        if not dataset.exists():
+            raise FileNotFoundError(f"Supplied dataset path does not exist: {dataset}")
+        return str(dataset.resolve())
 
     def _build_metadata(
         self, paper: Path, repository_commit: str | None, target: str

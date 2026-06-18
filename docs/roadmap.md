@@ -22,6 +22,28 @@ WATCH      Is the published artifact still reproducible?
 
 Do not build all five immediately. Build them on top of one strong evidence model.
 
+## Researcher Journey
+
+The user-facing product direction is:
+
+```text
+Audit
+  -> Baseline
+  -> Compare
+  -> Improve
+  -> Publish
+```
+
+The current `baseline` and `compare` commands are static planning workflows. They preserve the scientific distinction between:
+
+```text
+Exact reproduction
+Independent replication
+Fair benchmark comparison
+```
+
+Execution remains a later security milestone.
+
 ## Current Priority
 
 MVP 0.1 remains a static reproducibility auditor. It should not execute repository code.
@@ -151,3 +173,18 @@ Do not prioritize:
 - General-purpose research chatbot
 - Conference integrations before benchmark credibility
 - A single unexplained reproducibility score
+
+## V0.2 Baseline And Compare
+
+Minimum target:
+
+- Python and PyTorch
+- One classification or regression task
+- Local dataset
+- Baseline and candidate repositories
+- Shared split, preprocessing, and metric
+- Isolated environment reconstruction
+- Smoke tests before full evaluation
+- Markdown and JSON comparison report
+
+Success should be measured by time to first runnable baseline, manual actions required, fair-comparison completion rate, and compute wasted before detecting blockers.

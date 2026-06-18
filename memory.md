@@ -112,6 +112,28 @@ audit.json
 reproducibility-report.md
 ```
 
+Research workflow planning:
+
+```bash
+repro-agent baseline \
+  --paper paper.pdf \
+  --repo ./baseline \
+  --target "Table 1 overall MAE" \
+  --mode exact_reproduction \
+  --output-dir experiments/baseline
+
+repro-agent compare \
+  --paper paper.pdf \
+  --baseline-repo ./baseline \
+  --candidate-repo ./candidate \
+  --dataset ./data \
+  --target "Table 1 overall MAE" \
+  --mode fair_benchmark \
+  --output-dir experiments/comparison
+```
+
+These commands generate plans only. They do not execute repository code.
+
 ## Architecture
 
 Implemented components:
@@ -123,6 +145,8 @@ Implemented components:
 - `report_builder`: generates Markdown reports.
 - `command_validator`: validates README commands against static `argparse` definitions.
 - `artifact_discovery`: inventories files, external links, artifact requirements, missing artifacts, and code-line evidence.
+- `BaselinePlan`: converts audit blockers into exact-reproduction, independent-replication, and fair-benchmark paths.
+- `ComparisonPlan`: defines the shared protocol required to compare a baseline and candidate fairly.
 
 Future placeholder components:
 
@@ -329,6 +353,15 @@ Why this was useful:
 9. Generated reports needed evidence, not just file names.
    The evidence engine now records README arguments and Python file-access lines.
 
+10. Static audit alone did not complete the researcher's daily workflow.
+    Baseline and compare planning were added as the first step toward runnable experiments.
+
+11. A training command was initially treated as sufficient for candidate comparison.
+    Comparison planning now requires a candidate evaluation entrypoint.
+
+12. Nested non-git fixture directories inherited the parent repository remote.
+    Git metadata detection now requires the inspected directory to be the actual Git root.
+
 ## Security Decisions
 
 MVP 0.1 must not execute repository code.
@@ -449,15 +482,15 @@ Note: `artifacts/` is gitignored by design.
 Recommended next steps:
 
 1. Make evidence extraction more precise by tracing CLI args through call graphs and dataset helper classes.
-2. Add repository-local Git LFS detection.
-3. Add GitHub release asset inventory.
-4. Add linked-download classification for Zenodo, Hugging Face, Figshare, Kaggle, Google Drive, and project pages.
-5. Add richer `ambiguous`, `restricted`, `cost_prohibitive`, and `inspection_failed` verdict paths.
-6. Add a five-repository benchmark suite.
-7. Add integration tests that use fixture repositories modeled after Pigformer.
-8. Add JSON Schema validation for audit outputs.
-9. Add command-audit evidence with script/line for missing required arguments.
-10. Build MVP 0.2 only after audit quality is strong: Docker environment reconstruction, still no full training.
+2. Add repository-local Git LFS detection and GitHub release inventory.
+3. Add external-link classification and restricted-access detection.
+4. Add JSON Schema validation for audit, baseline, and comparison outputs.
+5. Build an isolated environment reconstruction layer.
+6. Add import, CLI help, dataset-loader, and checkpoint smoke tests.
+7. Create a proven adapter contract for candidate evaluation.
+8. Execute one small baseline and candidate under the same protocol.
+9. Extract metrics and generate a statistical comparison report.
+10. Add improvement planning only after fair comparison works end to end.
 
 ## Benchmark Plan
 

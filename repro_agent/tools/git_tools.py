@@ -7,6 +7,8 @@ import subprocess
 
 
 def get_commit(repo_path: Path) -> str | None:
+    if not _is_repository_root(repo_path):
+        return None
     result = subprocess.run(
         ["git", "-C", str(repo_path), "rev-parse", "HEAD"],
         check=False,
@@ -19,6 +21,8 @@ def get_commit(repo_path: Path) -> str | None:
 
 
 def get_remote_url(repo_path: Path) -> str | None:
+    if not _is_repository_root(repo_path):
+        return None
     result = subprocess.run(
         ["git", "-C", str(repo_path), "remote", "get-url", "origin"],
         check=False,
@@ -44,3 +48,15 @@ def clone_repository(url: str, destination: Path) -> Path:
 
 def looks_like_url(source: str) -> bool:
     return source.startswith(("https://", "http://", "git@"))
+
+
+def _is_repository_root(repo_path: Path) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(repo_path), "rev-parse", "--show-toplevel"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        return False
+    return Path(result.stdout.strip()).resolve() == repo_path.resolve()
