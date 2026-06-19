@@ -36,6 +36,8 @@ Known commits:
 2161ef9 Initial ReproAgent scaffold
 c1727de Add evidence-backed artifact audit
 430e156 Add project memory handoff
+6d37432 Add audit verdict metadata and CI
+31398ed Add baseline and comparison planning
 ```
 
 ## Current MVP Scope
@@ -133,6 +135,18 @@ repro-agent compare \
 ```
 
 These commands generate plans only. They do not execute repository code.
+
+Environment and adapter planning:
+
+```bash
+repro-agent environment-plan \
+  --repo ./baseline \
+  --output-dir experiments/environment
+
+repro-agent candidate-adapter \
+  --repo ./candidate \
+  --output experiments/candidate-adapter.json
+```
 
 ## Architecture
 
@@ -399,7 +413,24 @@ Scientific repairs must require explicit approval and may disqualify exact repro
 
 ## Tests And Verification
 
-`pytest` was not installed locally during development, so tests were verified by direct invocation of test functions plus `compileall`.
+The dev dependencies were installed locally with:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
+Important local environment lesson: the bare `pytest` executable pointed to a different Python installation. Use:
+
+```bash
+python -m pytest
+```
+
+Current result:
+
+```text
+20 passed
+82% total coverage
+```
 
 Commands used:
 
@@ -413,6 +444,42 @@ CI was added with GitHub Actions and pytest coverage configuration. Locally, `py
 ```bash
 python -m pip install -e ".[dev]"
 ```
+
+GitHub Actions now runs `python -m pytest` on Python 3.10, 3.11, and 3.12.
+
+## Output Contracts
+
+Bundled JSON Schemas validate:
+
+```text
+audit.json
+artifact-audit.json
+command-audit.json
+environment-audit.json
+baseline-plan.json
+comparison-plan.json
+environment-plan.json
+candidate-adapter.json
+```
+
+Schema version: `0.2.0`.
+
+## Environment Planning
+
+The environment planner now generates:
+
+- `Dockerfile.reproagent`
+- Docker build command with absolute Dockerfile/context paths
+- Non-root runtime
+- Network disabled by default
+- Read-only root filesystem
+- Dropped capabilities
+- `no-new-privileges`
+- CPU, memory, and PID limits
+- Dedicated writable artifact mount
+- Progressive smoke-test stages
+
+Docker was not installed on the development machine on June 18, 2026, so no image build or container execution was performed.
 
 Manual assertion suite invoked tests from:
 

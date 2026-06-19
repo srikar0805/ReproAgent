@@ -8,7 +8,7 @@ Its first job is not to promise that every paper can be reproduced. Its job is t
 
 A blocked result is useful. It tells researchers, reviewers, authors, and labs exactly which scientific artifacts are missing or which documented commands are invalid.
 
-Version `0.1` focuses on static reproducibility auditing:
+The original `0.1` foundation focused on static reproducibility auditing:
 
 - Inspect a paper PDF or extracted text file.
 - Inspect a Python/PyTorch repository.
@@ -17,6 +17,8 @@ Version `0.1` focuses on static reproducibility auditing:
 - Discover required datasets, labels, splits, checkpoints, configs, and output files.
 - Compare required artifacts against public repository contents.
 - Produce a blocked/runnable verdict without executing untrusted code.
+
+Current development version: `0.2.0`.
 
 ## Quick Start
 
@@ -108,6 +110,79 @@ fair_benchmark
 
 These commands currently generate preparation and comparison plans. They do not execute repository code yet.
 
+## Output Contracts
+
+The following JSON outputs are validated against bundled JSON Schema contracts before they are written:
+
+```text
+audit.json
+artifact-audit.json
+command-audit.json
+environment-audit.json
+baseline-plan.json
+comparison-plan.json
+environment-plan.json
+candidate-adapter.json
+```
+
+Audit-related outputs include schema/tool versions, audit ID, creation time, repository commit, and paper hash.
+
+## Environment Planning
+
+Generate an isolated Docker build and progressive smoke-test plan for a stable local checkout:
+
+```bash
+repro-agent environment-plan \
+  --repo ./baseline-repo \
+  --output-dir experiments/environment
+```
+
+Outputs:
+
+```text
+environment-plan.json
+Dockerfile.reproagent
+runtime-artifacts/
+```
+
+The generated runtime policy uses:
+
+- Non-root user
+- Network disabled by default
+- Read-only root filesystem
+- Dropped Linux capabilities
+- `no-new-privileges`
+- CPU, memory, and PID limits
+- Temporary `/tmp`
+- Dedicated artifact mount
+
+Progressive stages are planned in this order:
+
+```text
+imports
+cli_help
+configuration
+dataset_loader
+checkpoint_loading
+one_batch_inference
+short_experiment
+full_experiment
+```
+
+The plan is not executed automatically.
+
+## Candidate Adapter
+
+Generate a reviewable candidate evaluation contract:
+
+```bash
+repro-agent candidate-adapter \
+  --repo ./my-model \
+  --output experiments/candidate-adapter.json
+```
+
+The adapter records the evaluation entrypoint, dataset/split/checkpoint/output arguments, required model-adapter methods, missing fields, and scientific constraints.
+
 ## Current Scope
 
 Supported in the first scaffold:
@@ -163,6 +238,15 @@ Still intentionally out of scope:
 - Scientific changes to model architecture, data, loss, or metrics
 
 The next execution milestone will build isolated environments and smoke tests. It will remain separate from static audit/planning.
+
+## Development
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest
+```
+
+The current local suite contains 20 tests and reports coverage through `pytest-cov`.
 
 ## Example Verdict
 

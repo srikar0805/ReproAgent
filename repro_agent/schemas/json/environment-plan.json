@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/environment-plan-0.2.0.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "tool_version",
+    "status",
+    "repository",
+    "repository_commit",
+    "python_version",
+    "framework",
+    "dependency_sources",
+    "image_name",
+    "dockerfile_name",
+    "dockerfile",
+    "build_command",
+    "run_prefix",
+    "resource_policy",
+    "smoke_tests",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.2.0"},
+    "tool_version": {"type": "string"},
+    "status": {"enum": ["planned", "unsupported"]},
+    "repository": {"type": "string"},
+    "repository_commit": {"type": ["string", "null"]},
+    "python_version": {"type": "string"},
+    "framework": {"type": ["string", "null"]},
+    "dependency_sources": {"type": "array", "items": {"type": "string"}},
+    "image_name": {"type": "string"},
+    "dockerfile_name": {"type": "string"},
+    "dockerfile": {"type": "string"},
+    "build_command": {"type": "array", "items": {"type": "string"}},
+    "run_prefix": {"type": "array", "items": {"type": "string"}},
+    "resource_policy": {"type": "object"},
+    "smoke_tests": {"type": "array"},
+    "notes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

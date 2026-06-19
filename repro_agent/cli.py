@@ -15,6 +15,7 @@ from repro_agent.reporting.report_builder import (
 )
 from repro_agent.schemas.common import to_plain_data
 from repro_agent.schemas.research import ResearchMode
+from repro_agent.schemas.validator import validate_output
 from repro_agent.tools.yaml_tools import dumps_yaml
 
 
@@ -59,11 +60,27 @@ def main(argv: list[str] | None = None) -> int:
             output_dir = Path(args.output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             _write_text(output_dir / "reproduction.yaml", dumps_yaml(to_plain_data(spec)))
-            _write_json(output_dir / "artifact-audit.json", to_plain_data(audit.artifact_audit))
-            _write_json(output_dir / "command-audit.json", to_plain_data(audit.command_audit))
-            _write_json(output_dir / "environment-audit.json", to_plain_data(audit.environment_audit))
+            _write_validated_json(
+                output_dir / "artifact-audit.json",
+                "artifact-audit",
+                _metadata_envelope(audit, "artifact_audit"),
+            )
+            _write_validated_json(
+                output_dir / "command-audit.json",
+                "command-audit",
+                _metadata_envelope(audit, "command_audit"),
+            )
+            _write_validated_json(
+                output_dir / "environment-audit.json",
+                "environment-audit",
+                _metadata_envelope(audit, "environment_audit"),
+            )
             _write_text(output_dir / "reproducibility-report.md", build_audit_report(audit))
-            _write_json(output_dir / "audit.json", to_plain_data(audit))
+            _write_validated_json(
+                output_dir / "audit.json",
+                "audit",
+                to_plain_data(audit),
+            )
             print(f"Wrote audit artifacts to {output_dir}")
             print(f"Verdict: {audit.verdict.status.value}")
             print(f"Reason: {audit.verdict.primary_reason}")
@@ -82,7 +99,11 @@ def main(argv: list[str] | None = None) -> int:
             output_dir = Path(args.output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             _write_audit_artifacts(output_dir, spec, audit)
-            _write_json(output_dir / "baseline-plan.json", to_plain_data(plan))
+            _write_validated_json(
+                output_dir / "baseline-plan.json",
+                "baseline-plan",
+                to_plain_data(plan),
+            )
             _write_text(
                 output_dir / "baseline-plan.md",
                 build_baseline_plan_report(plan),
@@ -106,13 +127,52 @@ def main(argv: list[str] | None = None) -> int:
             output_dir = Path(args.output_dir)
             output_dir.mkdir(parents=True, exist_ok=True)
             _write_audit_artifacts(output_dir, spec, audit)
-            _write_json(output_dir / "comparison-plan.json", to_plain_data(plan))
+            _write_validated_json(
+                output_dir / "comparison-plan.json",
+                "comparison-plan",
+                to_plain_data(plan),
+            )
             _write_text(
                 output_dir / "comparison-plan.md",
                 build_comparison_plan_report(plan),
             )
             print(f"Wrote comparison plan to {output_dir}")
             print(f"Mode: {plan.mode.value}")
+            print(f"Status: {plan.status.value}")
+            return 0
+
+        if args.command == "environment-plan":
+            output_dir = Path(args.output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            runtime_artifacts = output_dir / "runtime-artifacts"
+            runtime_artifacts.mkdir(parents=True, exist_ok=True)
+            plan = orchestrator.plan_environment(
+                repo=args.repo,
+                artifact_dir=runtime_artifacts,
+                dockerfile_path=output_dir / "Dockerfile.reproagent",
+            )
+            data = to_plain_data(plan)
+            _write_validated_json(
+                output_dir / "environment-plan.json",
+                "environment-plan",
+                data,
+            )
+            _write_text(output_dir / plan.dockerfile_name, plan.dockerfile)
+            print(f"Wrote environment plan to {output_dir}")
+            print(f"Status: {plan.status.value}")
+            print("Execution: not attempted")
+            return 0
+
+        if args.command == "candidate-adapter":
+            output = Path(args.output)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            plan = orchestrator.plan_candidate_adapter(args.repo)
+            _write_validated_json(
+                output,
+                "candidate-adapter",
+                to_plain_data(plan),
+            )
+            print(f"Wrote candidate adapter plan to {output}")
             print(f"Status: {plan.status.value}")
             return 0
 
@@ -196,6 +256,23 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--device", choices=["cpu", "cuda"], default="cpu")
     compare.add_argument("--clone", action="store_true")
     compare.add_argument("--output-dir", default="experiments/comparison")
+
+    environment = subparsers.add_parser(
+        "environment-plan",
+        help="Generate a sandboxed Docker build and progressive smoke-test plan.",
+    )
+    environment.add_argument("--repo", required=True, help="Stable local repository checkout.")
+    environment.add_argument("--output-dir", default="experiments/environment")
+
+    adapter = subparsers.add_parser(
+        "candidate-adapter",
+        help="Generate a reviewable candidate evaluation adapter contract.",
+    )
+    adapter.add_argument("--repo", required=True, help="Stable local candidate checkout.")
+    adapter.add_argument(
+        "--output",
+        default="experiments/candidate-adapter.json",
+    )
     return parser
 
 
@@ -210,17 +287,41 @@ def _write_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def _write_validated_json(path: Path, schema_name: str, data: dict) -> None:
+    validate_output(schema_name, data)
+    _write_json(path, data)
+
+
 def _write_text(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
 def _write_audit_artifacts(output_dir: Path, spec, audit) -> None:
     _write_text(output_dir / "reproduction.yaml", dumps_yaml(to_plain_data(spec)))
-    _write_json(output_dir / "artifact-audit.json", to_plain_data(audit.artifact_audit))
-    _write_json(output_dir / "command-audit.json", to_plain_data(audit.command_audit))
-    _write_json(output_dir / "environment-audit.json", to_plain_data(audit.environment_audit))
+    _write_validated_json(
+        output_dir / "artifact-audit.json",
+        "artifact-audit",
+        _metadata_envelope(audit, "artifact_audit"),
+    )
+    _write_validated_json(
+        output_dir / "command-audit.json",
+        "command-audit",
+        _metadata_envelope(audit, "command_audit"),
+    )
+    _write_validated_json(
+        output_dir / "environment-audit.json",
+        "environment-audit",
+        _metadata_envelope(audit, "environment_audit"),
+    )
     _write_text(output_dir / "reproducibility-report.md", build_audit_report(audit))
-    _write_json(output_dir / "audit.json", to_plain_data(audit))
+    _write_validated_json(output_dir / "audit.json", "audit", to_plain_data(audit))
+
+
+def _metadata_envelope(audit, field_name: str) -> dict:
+    return {
+        "metadata": to_plain_data(audit.metadata),
+        field_name: to_plain_data(getattr(audit, field_name)),
+    }
 
 
 if __name__ == "__main__":

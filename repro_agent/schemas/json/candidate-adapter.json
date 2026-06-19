@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/candidate-adapter-0.2.0.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "tool_version",
+    "status",
+    "repository",
+    "repository_commit",
+    "framework",
+    "evaluation_entrypoint",
+    "evaluation_command",
+    "input_arguments",
+    "output_contract",
+    "required_methods",
+    "scientific_constraints",
+    "missing_fields"
+  ],
+  "properties": {
+    "schema_version": {"const": "0.2.0"},
+    "tool_version": {"type": "string"},
+    "status": {"enum": ["planned", "incomplete"]},
+    "repository": {"type": "string"},
+    "repository_commit": {"type": ["string", "null"]},
+    "framework": {"type": ["string", "null"]},
+    "evaluation_entrypoint": {"type": ["string", "null"]},
+    "evaluation_command": {"type": "array", "items": {"type": "string"}},
+    "input_arguments": {"type": "object"},
+    "output_contract": {"type": "object"},
+    "required_methods": {"type": "array", "items": {"type": "string"}},
+    "scientific_constraints": {"type": "array", "items": {"type": "string"}},
+    "missing_fields": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

@@ -28,6 +28,32 @@ Audit evidence
 
 `ComparisonPlan` records baseline/candidate evaluation entrypoints and the shared dataset, split, preprocessing, metric, fold, and seed requirements needed for a fair comparison.
 
+## Environment Boundary
+
+`EnvironmentBuilder` generates a Dockerfile and build plan from the inspected Python/dependency metadata.
+
+`SandboxExecutor` generates a hardened `docker run` prefix and progressive smoke-test stages. It does not execute containers by itself.
+
+```text
+Static audit
+  -> environment plan
+  -> Docker build
+  -> imports
+  -> CLI help
+  -> configuration
+  -> dataset loader
+  -> checkpoint loading
+  -> one-batch inference
+  -> short experiment
+  -> full experiment
+```
+
+Each stage after static configuration requires explicit approval when it touches data, checkpoints, or experiment execution.
+
+## Stable Contracts
+
+Machine-readable outputs are checked against bundled JSON Schemas before writing. The current schema version is `0.2.0`.
+
 ## Pipeline
 
 ```text

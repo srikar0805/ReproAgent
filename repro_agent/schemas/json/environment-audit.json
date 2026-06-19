@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/environment-audit-0.2.0.json",
+  "type": "object",
+  "required": ["metadata", "environment_audit"],
+  "properties": {
+    "metadata": {"$ref": "common.json#/$defs/metadata"},
+    "environment_audit": {
+      "type": "object",
+      "required": ["dependency_sources", "python_version", "framework", "status", "notes"]
+    }
+  },
+  "additionalProperties": false
+}

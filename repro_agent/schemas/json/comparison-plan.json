@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/comparison-plan-0.2.0.json",
+  "type": "object",
+  "required": [
+    "metadata",
+    "mode",
+    "status",
+    "target",
+    "baseline",
+    "candidate",
+    "shared_protocol",
+    "blockers",
+    "options",
+    "fairness_requirements",
+    "next_steps"
+  ],
+  "properties": {
+    "metadata": {"$ref": "common.json#/$defs/metadata"},
+    "mode": {
+      "enum": ["exact_reproduction", "independent_replication", "fair_benchmark"]
+    },
+    "status": {"type": "string"},
+    "target": {"type": "object"},
+    "baseline": {"type": "object"},
+    "candidate": {"type": "object"},
+    "shared_protocol": {"type": "object"},
+    "blockers": {"type": "array"},
+    "options": {"type": "array"},
+    "fairness_requirements": {"type": "array", "items": {"type": "string"}},
+    "next_steps": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": false
+}

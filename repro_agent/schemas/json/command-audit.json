@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/command-audit-0.2.0.json",
+  "type": "object",
+  "required": ["metadata", "command_audit"],
+  "properties": {
+    "metadata": {"$ref": "common.json#/$defs/metadata"},
+    "command_audit": {
+      "type": "object",
+      "required": [
+        "documented_command",
+        "corrected_command",
+        "command_valid",
+        "missing_required_arguments",
+        "missing_referenced_paths",
+        "documentation_issues"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

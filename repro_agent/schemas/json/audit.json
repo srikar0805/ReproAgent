@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/audit-0.2.0.json",
+  "type": "object",
+  "required": [
+    "metadata",
+    "status",
+    "target",
+    "repository",
+    "artifact_audit",
+    "command_audit",
+    "environment_audit",
+    "compute",
+    "verdict"
+  ],
+  "properties": {
+    "metadata": {"$ref": "common.json#/$defs/metadata"},
+    "status": {"type": "string"},
+    "target": {"type": "object"},
+    "repository": {"type": "object"},
+    "artifact_audit": {"type": "object"},
+    "command_audit": {"type": "object"},
+    "environment_audit": {"type": "object"},
+    "compute": {"type": "object"},
+    "verdict": {"type": "object"}
+  },
+  "additionalProperties": false
+}

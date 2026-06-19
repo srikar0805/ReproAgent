@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/artifact-audit-0.2.0.json",
+  "type": "object",
+  "required": ["metadata", "artifact_audit"],
+  "properties": {
+    "metadata": {"$ref": "common.json#/$defs/metadata"},
+    "artifact_audit": {
+      "type": "object",
+      "required": [
+        "required_artifacts",
+        "available_artifacts",
+        "missing_artifacts",
+        "external_links",
+        "status"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

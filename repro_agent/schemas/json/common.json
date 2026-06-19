@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reproagent.dev/schemas/common-0.2.0.json",
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "tool_version",
+        "audit_id",
+        "created_at",
+        "repository_commit",
+        "paper_hash"
+      ],
+      "properties": {
+        "schema_version": {"const": "0.2.0"},
+        "tool_version": {"type": "string", "minLength": 1},
+        "audit_id": {"type": "string", "pattern": "^audit-[a-f0-9]{12}$"},
+        "created_at": {"type": "string", "format": "date-time"},
+        "repository_commit": {"type": ["string", "null"]},
+        "paper_hash": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

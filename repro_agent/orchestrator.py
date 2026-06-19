@@ -9,6 +9,8 @@ import tempfile
 
 from repro_agent import __version__
 from repro_agent.agents.artifact_auditor import ArtifactAuditor
+from repro_agent.agents.candidate_adapter import CandidateAdapterBuilder
+from repro_agent.agents.environment_builder import EnvironmentBuilder
 from repro_agent.agents.paper_analyzer import PaperAnalyzer
 from repro_agent.agents.repository_inspector import RepositoryInspector
 from repro_agent.schemas.audit import (
@@ -21,8 +23,10 @@ from repro_agent.schemas.audit import (
     ReproducibilityAudit,
     ReproductionStatus,
 )
+from repro_agent.schemas.adapter import CandidateAdapterPlan
 from repro_agent.schemas.common import to_plain_data
 from repro_agent.schemas.experiment import ReproductionSpec
+from repro_agent.schemas.environment import EnvironmentBuildPlan
 from repro_agent.schemas.research import (
     BaselinePlan,
     ComparisonPlan,
@@ -41,10 +45,16 @@ class Orchestrator:
         paper_analyzer: PaperAnalyzer | None = None,
         repository_inspector: RepositoryInspector | None = None,
         artifact_auditor: ArtifactAuditor | None = None,
+        environment_builder: EnvironmentBuilder | None = None,
+        candidate_adapter_builder: CandidateAdapterBuilder | None = None,
     ) -> None:
         self.paper_analyzer = paper_analyzer or PaperAnalyzer()
         self.repository_inspector = repository_inspector or RepositoryInspector()
         self.artifact_auditor = artifact_auditor or ArtifactAuditor()
+        self.environment_builder = environment_builder or EnvironmentBuilder()
+        self.candidate_adapter_builder = (
+            candidate_adapter_builder or CandidateAdapterBuilder()
+        )
 
     def inspect_paper(self, paper: Path, target: str | None = None) -> dict:
         return to_plain_data(self.paper_analyzer.analyze(paper, target))
@@ -322,6 +332,39 @@ class Orchestrator:
         )
         return spec, audit, plan
 
+    def plan_environment(
+        self,
+        repo: str,
+        artifact_dir: Path,
+        dockerfile_path: Path | None = None,
+    ) -> EnvironmentBuildPlan:
+        repo_path = Path(repo).expanduser()
+        if not repo_path.exists():
+            if looks_like_url(repo):
+                raise ValueError(
+                    "Environment planning requires a stable local checkout. "
+                    "Clone the repository locally first."
+                )
+            raise FileNotFoundError(repo)
+        inspection = self.repository_inspector.inspect_path(repo_path.resolve())
+        return self.environment_builder.plan(
+            repo_path=repo_path.resolve(),
+            inspection=inspection,
+            artifact_dir=artifact_dir,
+            dockerfile_path=dockerfile_path,
+        )
+
+    def plan_candidate_adapter(self, repo: str) -> CandidateAdapterPlan:
+        repo_path = Path(repo).expanduser()
+        if not repo_path.exists():
+            if looks_like_url(repo):
+                raise ValueError(
+                    "Candidate adapter planning requires a stable local checkout."
+                )
+            raise FileNotFoundError(repo)
+        inspection = self.repository_inspector.inspect_path(repo_path.resolve())
+        return self.candidate_adapter_builder.plan(inspection)
+
     def _resolve_repo_for_audit(
         self, repo: str, clone: bool, tmpdir: Path
     ) -> tuple[Path, str | None]:
@@ -522,7 +565,7 @@ class Orchestrator:
             .replace("+00:00", "Z")
         )
         return ReportMetadata(
-            schema_version="0.1.0",
+            schema_version="0.2.0",
             tool_version=__version__,
             audit_id=audit_id,
             created_at=created_at,

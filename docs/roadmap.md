@@ -188,3 +188,22 @@ Minimum target:
 - Markdown and JSON comparison report
 
 Success should be measured by time to first runnable baseline, manual actions required, fair-comparison completion rate, and compute wasted before detecting blockers.
+
+Current `0.2.0` progress:
+
+- Real pytest suite and coverage run locally
+- GitHub Actions invokes `python -m pytest`
+- Versioned JSON Schema validation
+- Dockerfile/environment plan generation
+- Hardened runtime command generation
+- Progressive smoke-test plan
+- Candidate adapter contract
+
+Still missing:
+
+- Docker engine integration
+- Actual image build
+- Actual smoke-test execution
+- Dataset/checkpoint adapters
+- Metric extraction from a real run
+- End-to-end baseline reproduction

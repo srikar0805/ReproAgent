@@ -4,13 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "repro-agent"
-version = "0.1.1"
+version = "0.2.0"
 description = "Evidence-backed research auditing, baseline preparation, and comparison planning."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "ReproAgent Contributors" }]
-dependencies = []
+dependencies = [
+    "jsonschema>=4.0",
+    "referencing>=0.30",
+]
 
 [project.optional-dependencies]
 pdf = ["pypdf>=4.0"]
@@ -24,6 +27,9 @@ repro-agent = "repro_agent.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["repro_agent*"]
+
+[tool.setuptools.package-data]
+"repro_agent.schemas.json" = ["*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
